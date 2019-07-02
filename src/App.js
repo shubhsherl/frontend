@@ -296,6 +296,9 @@ class App extends Component {
                 <button onClick={this.pruneAll} className="btn btn-primary mr-2 float-right">
                   {pruneText}
                     </button>
+                <button onClick={this.resetLedger} className="btn btn-primary mr-2 float-right">
+                  Reset
+                    </button>
               </div>
               {this.renderTabList()}
               <ul className="list-group list-group-flush">
