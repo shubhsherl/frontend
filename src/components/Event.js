@@ -38,6 +38,7 @@ export default class CustomModal extends Component {
         super(props);
         let i = localStorage.getItem('initFreq_last');
         i = i ? parseInt(i) + 1 : 1;
+        if (i<1)i=1;
         this.state = {
             orgDropdownOpen: false,
             fcnDropdownOpen: false,
@@ -79,6 +80,7 @@ export default class CustomModal extends Component {
     changeTime(fcn) {
         let i = localStorage.getItem(`${fcn}_last`);
         i = i ? parseInt(i) + 1 : 1;
+        if (i<1) i=1;
         if (fcn.substring(0, 4) === 'read')
             i = 1;
         this.setState({ timeBlock: i, time: getTime(i) });
@@ -96,16 +98,19 @@ export default class CustomModal extends Component {
     timeDropdown() {
         const time = [];
         const { fcn } = this.state;
-        if (fcn.substring(0, 4) === 'init') {
-            let i = localStorage.getItem(`${fcn}_last`);
-            i = i ? parseInt(i) + 1 : 1;
+        // if (fcn.substring(0, 4) === 'init') {
+        //     let i = localStorage.getItem(`${fcn}_last`);
+        //     i = i ? parseInt(i) + 1 : 1;
+        //     time.push({ t: i, s: getTime(i) });
+        // } else {
+        //     let k = localStorage.getItem(`init${fcn.substring(4, 4)}_last`);
+        //     k = k ? parseInt(k) : 1;
+        //     for (let i = 1; i <= k; i++) {
+        //         time.push({ t: i, s: getTime(i) });
+        //     }
+        // }
+        for (let i = 1; i <= 96; i++) {
             time.push({ t: i, s: getTime(i) });
-        } else {
-            let k = localStorage.getItem(`init${fcn.substring(4, 4)}_last`);
-            k = k ? parseInt(k) : 1;
-            for (let i = 1; i <= k; i++) {
-                time.push({ t: i, s: getTime(i) });
-            }
         }
         return time.map((e) => <DropdownItem onClick={() => { this.setState({ timeBlock: e.t, time: e.s }) }}>{e.s}</DropdownItem>)
     };

@@ -31,10 +31,31 @@ function getData(options) {
     return data;
 }
 
+function getDelData(options) {
+    let data = {fcn: options.fcn};
+    const {timeBlock} = options;
+    switch(data.fcn) {
+        case 'deleteFreq': 
+            data.peers = threePeers;
+            data.args = [`${BASE_TIME + (timeBlock-1)*900}`];
+        break;
+        case 'deleteUnit': 
+            data.peers = threePeers;
+            data.args = ['Org2', 'Org3', `${BASE_TIME + (timeBlock-1)*900}`];
+        break;
+        case 'deleteBill': 
+            data.peers = threePeers;
+            data.args = ['Org2', 'Org3', `${BASE_TIME + (timeBlock-1)*900}`];
+        break;
+        default:
+    }
+    return data;
+}
+
 export const api = {
     init({fcn, org, timeBlock}) {
         const freq = FREQ[timeBlock-1];
-        const unit = 0.3;
+        const unit = parseFloat(((Math.random() - 0.5)/2).toFixed(2));
         return API.post(`/channels/${CHANNEL}/chaincodes/${CHAINCODE}`, getData({fcn: fcn, timeBlock, freq, unit}),
             {headers: {'authorization': `Bearer ${data[org].token}`, 'content-type': 'application/json'}} );
     },
@@ -50,5 +71,10 @@ export const api = {
             {headers: {'authorization': `Bearer ${data[org].token}`, 'content-type': 'application/json'}} )
             .then(res => {return res.data;})
             .catch(err => console.log(err));
+    },
+
+    del({fcn, org, timeBlock}) {
+        return API.post(`/channels/${CHANNEL}/chaincodes/${CHAINCODE}`, getDelData({fcn: fcn, timeBlock}),
+            {headers: {'authorization': `Bearer ${data[org].token}`, 'content-type': 'application/json'}} );
     },
 }

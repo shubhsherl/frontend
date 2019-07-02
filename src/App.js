@@ -2,8 +2,7 @@
 
 import React, { Component } from "react";
 import Modal from "./components/Event";
-import Simulation  from "./components/Simulation";
-import {api} from './api';
+import { api } from './api';
 const filters = ['All', 'Frequencies', 'Units', 'Bills'];
 
 class App extends Component {
@@ -12,7 +11,10 @@ class App extends Component {
     this.state = {
       filter: 'All',
       blockList: [],
-      price: 0
+      price: 0,
+      simulationText: 'Run Simulation',
+      pruneText: 'Reset',
+      fetchText: 'Fetch All Events',
     };
   }
   componentDidMount() {
@@ -25,14 +27,14 @@ class App extends Component {
     const { filter } = this.state;
     return (
       <div>
-      <div className="my-5 tab-list">
-        {filters.map((f) => (
-          <span onClick={() => this.setState({ filter: f })}
-            className={filter === f ? "" : "active"}
-          >
-            {f}
-          </span>
-        ))}
+        <div className="my-5 tab-list">
+          {filters.map((f) => (
+            <span onClick={() => this.setState({ filter: f })}
+              className={filter === f ? "" : "active"}
+            >
+              {f}
+            </span>
+          ))}
         </div>
         Total Bill: Rs. {this.state.price}
         <span>
@@ -120,11 +122,11 @@ class App extends Component {
   };
   handleSubmit = (item, t = false) => {
     let { blockList, price } = this.state;
-    if(!t) this.toggle();
-    const p = blockList.find((i) => {return i.fcn === item.fcn && i.time === item.time});
+    if (!t) this.toggle();
+    const p = blockList.find((i) => { return i.fcn === item.fcn && i.time === item.time });
     if (item.fcn && !p) {
-      if (item.fcn === 'readBill') {
-        price = price + item.data.price;
+      if (item.fcn === 'readBill' && item.data.price) {
+        price = parseFloat((price + item.data.price).toFixed(3));
       }
       blockList.push(item);
       this.setState({ blockList, price });
@@ -141,7 +143,7 @@ class App extends Component {
     b = b ? parseInt(b) : 0;
     for (i = 1; i <= f; i++) {
       const fcn = 'readFreq', timeBlock = i, org = 'Org2';
-      api.read({fcn, timeBlock, org})
+      api.read({ fcn, timeBlock, org })
         .then(res => {
           this.handleSubmit({ data: res, fcn: fcn, org: org, time: timeBlock }, true);
         })
@@ -149,7 +151,7 @@ class App extends Component {
     }
     for (i = 1; i <= u; i++) {
       const fcn = 'readUnit', timeBlock = i, org = 'Org2';
-      api.read({fcn, timeBlock, org})
+      api.read({ fcn, timeBlock, org })
         .then(res => {
           this.handleSubmit({ data: res, fcn: fcn, org: org, time: timeBlock }, true);
         })
@@ -157,9 +159,51 @@ class App extends Component {
     }
     for (i = 1; i <= b; i++) {
       const fcn = 'readBill', timeBlock = i, org = 'Org2';
-      api.read({fcn, timeBlock, org})
+      api.read({ fcn, timeBlock, org })
         .then(res => {
           this.handleSubmit({ data: res, fcn: fcn, org: org, time: timeBlock }, true);
+        })
+        .catch(err => console.log(err));
+    }
+  };
+
+  pruneAll = () => {
+    let f = localStorage.getItem('initFreq_last'),
+      u = localStorage.getItem('initUnit_last'),
+      b = localStorage.getItem('initBill_last'), i;
+    f = f ? parseInt(f) : 0;
+    u = u ? parseInt(u) : 0;
+    b = b ? parseInt(b) : 0;
+    for (i = f; i >0; i--) {
+      const fcn = 'deleteFreq', timeBlock = i, org = 'Org2';
+      api.del({ fcn, timeBlock, org })
+        .then(res => {
+          if (res.data.success)  {
+            localStorage.setItem('initFreq_last', i);
+          }
+          this.handleDelete({ fcn: 'readFreq', org: org, time: timeBlock }, true);
+        })
+        .catch(err => console.log(err));
+    }
+    for (i = b; i > 0; i--) {
+      const fcn = 'deleteUnit', timeBlock = i, org = 'Org2';
+      api.del({ fcn, timeBlock, org })
+        .then(res => {
+          if (res.data.success)  {
+            localStorage.setItem('initUnit_last', i);
+          }
+          this.handleDelete({ fcn: 'readUnit', org: org, time: timeBlock }, true);
+        })
+        .catch(err => console.log(err));
+    }
+    for (i = b; i > 0; i--) {
+      const fcn = 'deleteBill', timeBlock = i, org = 'Org2';
+      api.del({ fcn, timeBlock, org })
+        .then(res => {
+          if (res.data.success)  {
+            localStorage.setItem('initBill_last', i);
+          }
+          this.handleDelete({ fcn: 'readBill', org: org, time: timeBlock }, true);
         })
         .catch(err => console.log(err));
     }
@@ -168,46 +212,59 @@ class App extends Component {
   performTask(options) {
     let { fcn, org, timeBlock } = options;
     api.init(options)
-        .then(res => {
-            if (!res.data.success) {
-                fcn = fcn + ' Error'
-            } else {
-                localStorage.setItem(`${fcn}_last`, timeBlock);
-            }
-            this.handleSubmit({ data: res.data, fcn: fcn, org: org, time: timeBlock }, true);
-        })
-        .catch(err => console.log(err));
+      .then(res => {
+        if (!res.data.success) {
+          fcn = fcn + ' Error'
+        } else {
+          localStorage.setItem(`${fcn}_last`, timeBlock);
+        }
+        this.handleSubmit({ data: res.data, fcn: fcn, org: org, time: timeBlock }, true);
+      })
+      .catch(err => console.log(err));
+  };
+
+  performAsyncTask(options) {
+    let { fcn, org, timeBlock } = options;
+    api.init(options)
+      .then(res => {
+        if (!res.data.success) {
+          fcn = fcn + ' Error'
+        } else {
+          this.performTask({ fcn: 'initBill', org: 'Org2', timeBlock })
+          localStorage.setItem(`${fcn}_last`, timeBlock);
+        }
+        this.handleSubmit({ data: res.data, fcn: fcn, org: org, time: timeBlock }, true);
+      })
+      .catch(err => console.log(err));
   };
 
   autoFetch = () => {
     let f = localStorage.getItem('initFreq_last'),
       u = localStorage.getItem('initUnit_last'),
       b = localStorage.getItem('initBill_last'), i;
-    f = f ? parseInt(f)+1 : 1;
-    u = u ? parseInt(u)+1 : 1;
-    b = b ? parseInt(b)+1 : 1;
-    for(u;u<f;u++) {
-      this.performTask({fcn: 'initUnit', org: 'Org3', timeBlock: u});
+    f = f ? parseInt(f) + 1 : 1;
+    u = u ? parseInt(u) + 1 : 1;
+    b = b ? parseInt(b) + 1 : 1;
+    for (u; u < f; u++) {
+      this.performAsyncTask({ fcn: 'initUnit', org: 'Org3', timeBlock: u });
     }
-    for(b;b<f;b++) {
-      this.performTask({fcn: 'initBill', org: 'Org2', timeBlock: b});
-    }
-    for(f;f<97;f++) {
-      this.performTask({fcn: 'initFreq', org: 'Org1', timeBlock: f});
-      this.performTask({fcn: 'initUnit', org: 'Org3', timeBlock: f});
-      this.performTask({fcn: 'initBill', org: 'Org2', timeBlock: f});
+    for (f; f < 97; f++) {
+      this.performTask({ fcn: 'initFreq', org: 'Org1', timeBlock: f });
+      this.performAsyncTask({ fcn: 'initUnit', org: 'Org3', timeBlock: f });
     }
   };
 
   hideAll = () => {
-    this.setState({blockList: [], price: 0});
+    this.setState({ blockList: [], price: 0 });
   }
 
   handleDelete = item => {
     let { blockList, price } = this.state;
-    blockList = blockList.filter((b)=>{return b.fcn!==item.fcn || b.time!==item.time});
-    if (item.fcn === 'readBill') {
-      price = price - item.data.price;
+    const len = blockList.length;
+    blockList = blockList.filter((b) => { return b.fcn !== item.fcn || b.time !== item.time });
+    if (item.fcn === 'readBill' && len !== blockList.length) {
+      if (item.data.price)
+        price = price - item.data.price;
       price = parseFloat(price.toFixed(3));
     }
     this.setState({ blockList, price });
@@ -219,6 +276,7 @@ class App extends Component {
     this.setState({ simModal: !this.state.simModal });
   };
   render() {
+    let { simulationText, pruneText, fetchText } = this.state;
     return (
       <main className="content">
         <h1 className="text-blue text-uppercase text-center my-4">Energyblocks</h1>
@@ -230,10 +288,13 @@ class App extends Component {
                   Add Event
                     </button>
                 <button onClick={this.fetchAll} className="btn btn-primary mr-2">
-                  Fetch All Events
+                  {fetchText}
                     </button>
                 <button onClick={this.autoFetch} className="btn btn-primary mr-2 float-right">
-                  Run Simulation
+                  {simulationText}
+                    </button>
+                <button onClick={this.pruneAll} className="btn btn-primary mr-2 float-right">
+                  {pruneText}
                     </button>
               </div>
               {this.renderTabList()}
@@ -247,11 +308,6 @@ class App extends Component {
           <Modal
             toggle={this.toggle}
             onSave={this.handleSubmit}
-          />
-        ) : null}
-        {this.state.simModal ? (
-          <Simulation
-            toggle={this.toggleSim}
           />
         ) : null}
       </main>
