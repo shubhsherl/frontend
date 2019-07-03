@@ -13,12 +13,12 @@ export const data = {
     Org2: {
         username: 'Station',
         token: 'ORG2_TOKEN',
-        permissions: ['initBill', 'readFreq', 'readBill', 'readUnit']
+        permissions: ['initBill','initUnit', 'readFreq', 'readBill', 'readUnit']
     },
     Org3: {
         username: 'Society',
         token: 'ORG3_TOKEN',
-        permissions: ['initUnit', 'readFreq', 'readBill', 'readUnit']
+        permissions: ['readFreq', 'readBill', 'readUnit']
     }
 }
 
